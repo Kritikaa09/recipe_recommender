@@ -8,3 +8,5 @@ torch
 joblib
 nltk
 python-multipart
+sqlalchemy
+

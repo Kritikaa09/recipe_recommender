@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #FFD194, #6A82FB);
+            min-height: 100vh;
+        }
+        header {
+            background: #FF6F61;
+            color: white;
+            text-align: center;
+            padding: 20px 0;
+            font-size: 28px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+        .search-bar {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            gap: 10px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            width: 60%;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+        }
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #FF6F61;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #ff3b2f;
+        }
+        .recipes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+        .recipe-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .recipe-card:hover {
+            transform: translateY(-5px);
+        }
+        .recipe-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+        .recipe-card h3 {
+            text-align: center;
+            padding: 10px;
+        }
+        /* Modal */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 999; 
+            padding-top: 60px; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.6);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 600px;
+            position: relative;
+        }
+        .close {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: #000;
+        }
+        .modal-content h3 {
+            margin-top: 0;
+        }
+        .modal-content p {
+            margin: 5px 0;
+        }
+        .rating-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+        .rating-input input {
+            width: 60px;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>Recipe Recommender Dashboard</header>
+    <div class="container">
+        <div class="search-bar">
+            <input type="text" id="ingredients" placeholder="Enter ingredients separated by commas">
+            <select id="method">
+                <option value="hybrid">Hybrid</option>
+                <option value="tfidf">TF-IDF</option>
+                <option value="sbert">SBERT</option>
+            </select>
+            <button onclick="getRecommendations()">Get Recipes</button>
+        </div>
+
+        <div class="recipes-grid" id="recipes">
+            <!-- Recipe cards appear here -->
+        </div>
+    </div>
+
+    <!-- Modal for Recipe Details -->
+    <div id="recipeModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h3 id="modalName"></h3>
+           <!-- <img id="modalImg" src="" width="100%" style="border-radius: 12px;">-->
+            <p><strong>Ingredients:</strong></p>
+            <p id="modalIngredients"></p>
+            <p><strong>Directions:</strong></p>
+            <p id="modalDirections"></p>
+            <p><strong>Total Time:</strong> <span id="modalTime"></span></p>
+            <p><strong>Servings:</strong> <span id="modalServings"></span></p>
+            <div class="rating-input">
+                <input type="number" id="modalRating" placeholder="0-5" min="0" max="5">
+                <button id="submitRatingBtn">Submit Rating</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+let token = localStorage.getItem('rs_token') || null;
+
+function getRecommendations() {
+    const ingredientsInput = document.getElementById('ingredients').value.trim();
+    const method = document.getElementById('method').value;
+
+    if (!ingredientsInput) {
+        alert("Please enter ingredients.");
+        return;
+    }
+
+    if (!token) {
+        alert("Please log in first!");
+        window.location.href = "login.html";
+        return;
+    }
+
+    const ingredients = ingredientsInput.split(',');
+
+    fetch('http://127.0.0.1:8000/recommend', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ ingredients, method, top_n: 10 })
+    })
+    .then(async res => {
+        const data = await res.json();
+
+        // ❌ FastAPI validation error
+        if (!res.ok) {
+            throw new Error(data.detail || "Failed to fetch recipes");
+        }
+
+        return data;
+    })
+    .then(data => {
+
+        // ❌ Backend rejected input (TF-IDF / SBERT threshold)
+        if (Array.isArray(data) && data.length === 1 && data[0].message) {
+            alert(data[0].message);
+            clearRecipes();
+            return;
+        }
+
+        // ❌ No recommendations
+        if (!data.recommendations || data.recommendations.length === 0) {
+            alert("No recipes found.");
+            clearRecipes();
+            return;
+        }
+
+        // ✅ Valid recommendations
+        displayRecipes(data.recommendations);
+    })
+    .catch(err => {
+        alert("Error: " + err.message);
+        clearRecipes();
+    });
+}
+
+function clearRecipes() {
+    document.getElementById('recipes').innerHTML = "";
+}
+
+function displayRecipes(recipes) {
+    const container = document.getElementById('recipes');
+    container.innerHTML = "";
+
+    recipes.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'recipe-card';
+        div.innerHTML = `
+            <img src="${r.img_src || 'https://via.placeholder.com/200'}" alt="${r.recipe_name}">
+            <h3>${r.recipe_name}</h3>
+        `;
+        div.onclick = () => openModal(r);
+        container.appendChild(div);
+    });
+}
+
+function openModal(recipe) {
+    document.getElementById('modalName').innerText = recipe.recipe_name;
+    document.getElementById('modalIngredients').innerText = recipe.ingredients;
+    document.getElementById('modalDirections').innerText = recipe.directions || 'No directions available';
+    document.getElementById('modalTime').innerText = recipe.total_time || 'N/A';
+    document.getElementById('modalServings').innerText = recipe.servings || 'N/A';
+    document.getElementById('modalRating').value = '';
+
+    const submitBtn = document.getElementById('submitRatingBtn');
+    submitBtn.onclick = () => rateRecipe(recipe.recipe_name);
+
+    document.getElementById('recipeModal').style.display = "block";
+}
+
+function closeModal() {
+    document.getElementById('recipeModal').style.display = "none";
+}
+
+function rateRecipe(recipe_name) {
+    const rating = parseFloat(document.getElementById('modalRating').value);
+
+    if (isNaN(rating) || rating < 0 || rating > 5) {
+        alert("Enter a rating between 0 and 5");
+        return;
+    }
+
+    if (!token) {
+        alert("Please log in first!");
+        window.location.href = "login.html";
+        return;
+    }
+
+    fetch('http://127.0.0.1:8000/rate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ recipe_name, rating })
+    })
+    .then(async res => {
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || "Failed to rate recipe");
+        }
+        return data;
+    })
+    .then(data => {
+        alert(data.message);
+        closeModal();
+    })
+    .catch(err => alert("Failed to rate: " + err.message));
+}
+</script>
+
+</body>
+</html>

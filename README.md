@@ -62,7 +62,7 @@ This project combines **TF-IDF, cosine similarity, and LightFM** to provide pers
 ---
 
 ## 📂 Project Structure
-
+```
 recipe-recommender/
 │
 ├── backend/                # Backend logic and ML pipeline
@@ -82,7 +82,7 @@ recipe-recommender/
 ├── .github/                # GitHub workflows / configs
 │
 └── README.md               # Project documentation
-
+```
 ---
 
 ## 📊 Model Performance

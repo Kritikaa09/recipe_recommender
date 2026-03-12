@@ -63,18 +63,25 @@ This project combines **TF-IDF, cosine similarity, and LightFM** to provide pers
 
 ## 📂 Project Structure
 
-```
 recipe-recommender/
 │
-├── app.py                 # Flask application
-├── model.py               # ML recommendation logic
-├── dataset/               # Recipe dataset
-├── notebooks/             # Data analysis & experiments
-├── templates/             # HTML templates
-├── static/                # CSS & JS files
-├── screenshots/           # Project demo images
-└── requirements.txt       # Dependencies
-```
+├── backend/                # Backend logic and ML pipeline
+│   │
+│   ├── data/               # Dataset and preprocessing files
+│   │
+│   ├── model/              # Trained models and recommendation logic
+│   │
+│   ├── utils/              # Helper functions and utilities
+│   │
+│   ├── testing/            # Testing scripts for the system
+│   │
+│   └── main.py / app.py    # Backend entry point
+│
+├── frontend/               # User interface
+│
+├── .github/                # GitHub workflows / configs
+│
+└── README.md               # Project documentation
 
 ---
 
